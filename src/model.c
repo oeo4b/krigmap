@@ -8,8 +8,8 @@
 
 float (*models[N_MDL+1])(float, model*);
 float* Xinv;
+features* f_worker;
 model* m_worker;
-int n_worker;
 
 float linear(float h, model* m) {
   return (m->nugget + h * (m->sill - m->nugget) / m->range);
@@ -192,7 +192,7 @@ void variogram(model* m, features* f, int mdl) {
 
 void predict(grid* g, model* m, features* f) {
   /* Set up copies to n and model for the worker thread */
-  n_worker = f->n;
+  f_worker = f;
   m_worker = m;
 
   /* Pointers to variogram models */
@@ -248,7 +248,6 @@ void predict(grid* g, model* m, features* f) {
     printf("\n");
   }
 
-
   free(Xinv);
   free(D);
 }
@@ -256,5 +255,14 @@ void predict(grid* g, model* m, features* f) {
 void* worker(void* v) {
   packet* p = (packet*)v;
 
-  (*p->value) = 3.1456783;
+  int i, j;
+  float w;
+  *p->value = 0;
+  for(i=0;i<f_worker->n;i++) {
+    w = 0;
+    for(j=0;j<f_worker->n;j++)
+      w += Xinv[i*(f_worker->n+1)+j] * models[m_worker->type](pow(pow(f_worker->x[j]-p->x, 2) + pow(f_worker->y[j]-p->y, 2), (float)0.5), m_worker);
+     w += Xinv[i*(f_worker->n+1)+f_worker->n];
+     *p->value += w * f_worker->response[i];
+   }
 }
