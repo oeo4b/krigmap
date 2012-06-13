@@ -13,6 +13,8 @@
 #define LAGS 10
 #define MAX_ITER 25
 
+#define DEFAULT_VAL -1
+
 typedef struct {
   unsigned int type;
   float nugget;
@@ -26,8 +28,6 @@ typedef struct {
   float x;
   float y;
   float* value;
-  float* Xinv;
-  model* m;
 } packet;
 
 float linear(float, model*);

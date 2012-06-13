@@ -6,6 +6,11 @@
 #include "features.h"
 #include "math/stats.h"
 
+float (*models[N_MDL+1])(float, model*);
+float* Xinv;
+model* m_worker;
+int n_worker;
+
 float linear(float h, model* m) {
   return (m->nugget + h * (m->sill - m->nugget) / m->range);
 }
@@ -185,9 +190,11 @@ void variogram(model* m, features* f, int mdl) {
   free(semivariance);
 }
 
-float (*models[N_MDL+1])(float, model*);
-
 void predict(grid* g, model* m, features* f) {
+  /* Set up copies to n and model for the worker thread */
+  n_worker = f->n;
+  m_worker = m;
+
   /* Pointers to variogram models */
   models[0] = NULL; /* Pointer to null for first */
   models[1] = &linear;
@@ -203,7 +210,7 @@ void predict(grid* g, model* m, features* f) {
       D[i*f->n+j] = pow(pow(f->x[i]-f->x[j], 2) + pow(f->y[i]-f->y[j], 2), 0.5);
 
   /* X^-1 * Y ~ W */
-  float* Xinv = (float*)malloc(sizeof(float)*(f->n+1)*(f->n+1));
+  Xinv = (float*)malloc(sizeof(float)*(f->n+1)*(f->n+1));
   for(i=0;i<=f->n;i++) {
     for(j=0;j<=f->n;j++) {
       if(i==f->n && j!=f->n) Xinv[i*(f->n+1)+j] = 1;
@@ -221,24 +228,33 @@ void predict(grid* g, model* m, features* f) {
   invert(Xinv, f->n+1);
 
   /* Estimate values based on model */
+  packet* p = (packet*)malloc(sizeof(packet)*g->n*g->m*SIDE*SIDE);
   for(i=0;i<g->n*SIDE;i++) {
     for(j=0;j<g->m*SIDE;j++) {
-      worker(&g->value[i*g->m*SIDE+j]);
+      if(g->land[i*g->m*SIDE+j]) {
+        p[i*g->m*SIDE+j].value = &g->value[i*g->m*SIDE+j];
+        p[i*g->m*SIDE+j].x = f->n;
+        p[i*g->m*SIDE+j].y = f->n;
+        worker(&p[i*g->m*SIDE+j]);
+      }
+      else g->value[i*g->m*SIDE+j] = DEFAULT_VAL;
     }
   }
 
   for(i=0;i<g->n*SIDE;i++) {
     for(j=0;j<g->m*SIDE;j++) {
-      printf("%f", g->value[i*g->m*SIDE+j]);
+      printf("%f ", g->value[i*g->m*SIDE+j]);
     }
     printf("\n");
   }
+
 
   free(Xinv);
   free(D);
 }
 
 void* worker(void* v) {
-  float* x = (float*)v;
-  *x = 3.14;
+  packet* p = (packet*)v;
+
+  (*p->value) = 3.1456783;
 }
