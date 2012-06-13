@@ -23,7 +23,11 @@ typedef struct {
 } model;
 
 typedef struct {
-
+  float x;
+  float y;
+  float* value;
+  float* Xinv;
+  model* m;
 } packet;
 
 float linear(float, model*);
