@@ -3,7 +3,21 @@ LIBS=-lm
 
 map: bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o
 	$(CC) $(LIBS) bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o -o bin/map
-	rm bin/*.o
+
+convpoly: bin/convpoly.o bin/polygons.o bin/stats.o bin/matrix.o
+	$(CC) $(LIBS) bin/convpoly.o bin/polygons.o bin/stats.o bin/matrix.o -o bin/convpoly
+
+regrid: bin/regrid.o bin/grid.o bin/polygons.o bin/features.o bin/stats.o bin/matrix.o
+	$(CC) $(LIBS) bin/regrid.o bin/grid.o bin/polygons.o bin/features.o bin/stats.o bin/matrix.o -o bin/regrid
+
+bin/regrid.o: src/regrid.c
+	$(CC) -c src/regrid.c -o bin/regrid.o
+
+bin/convpoly.o: src/convpoly.c
+	$(CC) -c src/convpoly.c -o bin/convpoly.o
+
+bin/polygons.o: src/polygons.c
+	$(CC) -c src/polygons.c -o bin/polygons.o
 
 bin/map.o: src/map.c
 	$(CC) -c src/map.c -o bin/map.o
@@ -24,4 +38,4 @@ bin/stats.o: src/math/stats.c
 	$(CC) -c src/math/stats.c -o bin/stats.o
 
 clean:
-	rm bin/map
+	rm bin/*

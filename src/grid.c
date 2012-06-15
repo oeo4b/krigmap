@@ -41,10 +41,6 @@ void startgrid(grid* g, features* f) {
   for(i=0;i<(g->n*SIDE)*(g->m*SIDE);i++) g->land[i] = 1; /* Set all to land by default */
 }
 
-void colorgrid(grid* g) {
-
-}
-
 void writegrid(grid* g) {
 
 }

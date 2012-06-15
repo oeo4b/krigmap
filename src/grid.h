@@ -17,8 +17,6 @@ typedef struct {
 
 void startgrid(grid*, features*);
 
-void colorgrid(grid*);
-
 void writegrid(grid*);
 
 void printgrid(grid*);

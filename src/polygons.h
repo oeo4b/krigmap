@@ -14,4 +14,12 @@ typedef struct {
   polygon* p;
 } polygons;
 
+int pip(int, float*, float*, float, float);
+
+void readpolygons(polygons*);
+
+void writepolygons(polygons*);
+
+void printpolygons(polygons*);
+
 #endif
