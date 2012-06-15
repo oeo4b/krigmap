@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include "polygons.h"
 #include "math/stats.h"
 
@@ -110,18 +111,21 @@ int main(int argc, char** argv) {
   polygons p;
   if(argc<2) {
     readpolygons(&p);
+    printpolygons(&p);
   }
   else {
+    if(access(argv[1], F_OK) == -1) {
+      fprintf(stderr, "Error: file %s does not exist.\n", argv[1]);
+      exit(1);
+    }
     /* Read and convert the csv file to a polygons type */
     FILE* f;
     f = fopen(argv[1], "r");
     readcsv(f, &p);
     fclose(f);
     writepolygons(&p);
+    printf("Wrote to polygons/all.ply.\n");
   }
-
-  /* Output polygons object */
-  printpolygons(&p);
 
   return 0;
 }

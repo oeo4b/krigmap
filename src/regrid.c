@@ -24,5 +24,9 @@ int main(int argc, char** argv) {
   grid g;
   startgrid(&g, &f);
 
+  /* Read polygons */
+  polygons p;
+  readpolygons(&p);
+
   return 0;
 }

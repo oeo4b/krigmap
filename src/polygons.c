@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <unistd.h>
 #include "polygons.h"
 
 int pip(int n, float *X, float *Y, float x, float y) {
@@ -13,6 +14,10 @@ int pip(int n, float *X, float *Y, float x, float y) {
 }
 
 void readpolygons(polygons* p) {
+  if(access("polygons/all.ply", F_OK) == -1) {
+    fprintf(stderr, "Error: file polygons/all.ply does not exist.\n");
+    exit(1);
+  }
   FILE* f;
   f = fopen("polygons/all.ply", "rb");
   fread(&p->n, 1, sizeof(unsigned int), f);

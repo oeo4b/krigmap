@@ -32,8 +32,6 @@ main(int argc, char** argv)
   startgrid(&g, &f);
   predict(&g, &m, &f);
 
-  colorgrid(&g);
-  writegrid(&g);    
 
   return 0;
 }

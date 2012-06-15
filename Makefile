@@ -1,6 +1,9 @@
 CC=gcc
 LIBS=-lm
 
+all: map convpoly regrid
+	rm bin/*.o
+
 map: bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o
 	$(CC) $(LIBS) bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o -o bin/map
 

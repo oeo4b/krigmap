@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <unistd.h>
 #include "grid.h"
 #include "features.h"
 #include "math/stats.h"
