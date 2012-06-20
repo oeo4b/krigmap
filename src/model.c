@@ -228,22 +228,24 @@ void predict(grid* g, model* m, features* f) {
   invert(Xinv, f->n+1);
 
   /* Estimate values based on model */
-  packet* p = (packet*)malloc(sizeof(packet)*g->n*g->m*SIDE*SIDE);
-  for(i=0;i<g->n*SIDE;i++) {
-    for(j=0;j<g->m*SIDE;j++) {
-      if(g->land[i*g->m*SIDE+j]) {
-        p[i*g->m*SIDE+j].value = &g->value[i*g->m*SIDE+j];
-        p[i*g->m*SIDE+j].x = f->n;
-        p[i*g->m*SIDE+j].y = f->n;
-        worker(&p[i*g->m*SIDE+j]);
+  int k = g->xlim[1]-g->xlim[0];
+  int l = g->ylim[1]-g->xlim[0];
+  packet* p = (packet*)malloc(sizeof(packet)*k*l*g->depth*g->depth);
+  for(i=0;i<k*g->depth;i++) {
+    for(j=0;j<l*g->depth;j++) {
+      if(g->land[i*l*g->depth+j]) {
+        p[i*l*g->depth+j].value = &g->value[i*l*g->depth+j];
+        p[i*l*g->depth+j].x = f->n;
+        p[i*l*g->depth+j].y = f->n;
+        worker(&p[i*l*g->depth+j]);
       }
-      else g->value[i*g->m*SIDE+j] = DEFAULT_VAL;
+      else g->value[i*l*g->depth+j] = DEFAULT_VAL;
     }
   }
 
-  for(i=0;i<g->n*SIDE;i++) {
-    for(j=0;j<g->m*SIDE;j++) {
-      printf("%f ", g->value[i*g->m*SIDE+j]);
+  for(i=0;i<k*g->depth;i++) {
+    for(j=0;j<l*g->depth;j++) {
+      printf("%f ", g->value[i*l*g->depth+j]);
     }
     printf("\n");
   }

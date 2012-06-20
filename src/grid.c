@@ -1,48 +1,90 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <unistd.h>
+#include <string.h>
 #include "grid.h"
 #include "features.h"
 #include "math/stats.h"
 
-void startgrid(grid* g, features* f) {
-  /* Spatial limits */
+void startgrid(grid* g, features* f, int level, int depth) {
+  g->level = level;
+  g->depth = depth;
+  float block = (float)90 / pow(2, (float)g->level);
+
+  /* Calculate grid boundaries */
   float xlim[] = { min(f->x, f->n), max(f->x, f->n) };
   float ylim[] = { min(f->y, f->n), max(f->y, f->n) };
 
-  /* Round to blocks -> 90 / n^l */
-  g->pixel = (float)90 / pow((float)2, LEVEL);
-  int i = floor((xlim[0] - (-180)) / g->pixel);
-  int j = floor((ylim[0] - (-90)) / g->pixel);
-  int k = ceil((xlim[1] - (-180)) / g->pixel);
-  int l = ceil((ylim[1] - (-90)) / g->pixel);
+  g->xlim[0] = floor((xlim[0]-(float)(-180))/block);
+  g->xlim[1] = ceil((xlim[1]-(float)(-180))/block);
+  g->ylim[0] = floor((ylim[0]-(float)(-90))/block);
+  g->ylim[1] = ceil((ylim[1]-(float)(-90))/block);
 
-  /* Coordinate limits */
-  g->n = k-i;
-  g->m = l-j;
-  g->xlim[0] = (-180) + i*g->pixel;
-  g->xlim[1] = (-180) + k*g->pixel;
-  g->ylim[0] = (-90) + j*g->pixel;
-  g->ylim[1] = (-90) + l*g->pixel;
+  /* Alloc mem */
+  int n = xlim[1]-xlim[0];
+  int m = ylim[1]-ylim[0];
+  g->land = (char*)malloc(sizeof(char)*n*m*g->depth*g->depth);
+  g->value = (float*)malloc(sizeof(float)*n*m*g->depth*g->depth);
 
-  /* Alloc to grid */
-  g->land = (char*)malloc(sizeof(char)*(g->n*SIDE)*(g->m*SIDE));
-  g->value = (float*)malloc(sizeof(float)*(g->n*SIDE)*(g->m*SIDE));
+  /* Memset */
+  memset(g->land, 0, n*m*g->depth*g->depth);
+  memset(g->value, 0, n*m*g->depth*g->depth);
+}
 
-  /* Use the grids to figure out land area */
-  FILE* fg;
-  char fname[100];
-  int a, b;
-  for(a=i;a<k;a++) {
-    for(b=j;b<l;b++) {
-      sprintf(fname, "grid/g%d_%d.ppm", a, b);
+void readgrid(grid* g) {
+  /* Read block by block for the entire grid */
+  FILE* f;
+  char gridfile[100];
+  int i, j, k, l;
+  int n = g->xlim[1]-g->xlim[0];
+  int m = g->ylim[1]-g->ylim[0];
+  unsigned char byte = 0;
+  int pos;
+
+  for(i=g->xlim[0];i<g->xlim[1];i++) {
+    for(j=g->ylim[0];j<g->ylim[1];j++) {
+      sprintf(gridfile, "grid/l%d_d%d_%d_%d.grd", g->level, g->depth, i, j);
+      f = fopen(gridfile, "rb");
+      for(k=0;k<n*g->depth;k++) {
+        for(l=0;l<m*g->depth;l++) {
+          pos = k*m*g->depth+l;
+	  if((pos%8)==0) fread(&byte, 1, 1, f);
+          if(byte&(1<<(pos%8))) g->land[pos] = 1;
+        }
+      }
+      fclose(f);
     }
   }
-  for(i=0;i<(g->n*SIDE)*(g->m*SIDE);i++) g->land[i] = 1; /* Set all to land by default */
+
 }
 
 void writegrid(grid* g) {
+  /* Write block by block for the entire grid */
+  FILE* f;
+  char gridfile[100];
+  int i, j, k, l;
+  int n = g->xlim[1]-g->xlim[0];
+  int m = g->ylim[1]-g->ylim[0];
+  unsigned char byte = 0;
+  int pos;
+
+  for(i=g->xlim[0];i<g->xlim[1];i++) {
+    for(j=g->ylim[0];j<g->ylim[1];j++) {
+      sprintf(gridfile, "grid/l%d_d%d_%d_%d.grd", g->level, g->depth, i, j);
+      f = fopen(gridfile, "wb");
+      for(k=0;k<n*g->depth;k++) {
+        for(l=0;l<m*g->depth;l++) {
+          pos = k*m*g->depth+l;
+	  if((pos%8)==0 && pos>0) {
+            fwrite(&byte, 1, 1, f);
+            byte = 0;
+          }
+          if(g->land[pos]) byte |= (1<<(pos%8));
+        }
+      }
+      fclose(f);
+    }
+  }
 
 }
 
@@ -50,3 +92,7 @@ void printgrid(grid* g) {
 
 }
 
+void freegrid(grid* g) {
+  free(g->land);
+  free(g->value);
+}

@@ -2,23 +2,23 @@
 #define GRID_H
 #include "features.h"
 
-#define LEVEL 12
-#define SIDE 200
-
 typedef struct {
-  float xlim[2];
-  float ylim[2];
-  unsigned int n;
-  unsigned int m;
-  float pixel;
+  unsigned int xlim[2];
+  unsigned int ylim[2];
+  unsigned short level;
+  unsigned int depth;
   char* land;
   float* value;
 } grid;
 
-void startgrid(grid*, features*);
+void startgrid(grid*, features*, int, int);
+
+void readgrid(grid*);
 
 void writegrid(grid*);
 
 void printgrid(grid*);
+
+void freegrid(grid*);
 
 #endif
