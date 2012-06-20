@@ -11,7 +11,7 @@ typedef struct {
   float* value;
 } grid;
 
-void startgrid(grid*, features*, int, int);
+void startgrid(grid*, features*, int, int, int);
 
 void readgrid(grid*);
 

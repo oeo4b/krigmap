@@ -27,7 +27,7 @@ void setlimits(features* f, polygons* p) {
 
 void setland(grid* g, polygons* p) {
   unsigned int i, j, k;
-  unsigned int a, b, c, d;
+  unsigned int a, b, c, d, inx;
   unsigned int n = g->xlim[1]-g->xlim[0];
   unsigned int m = g->ylim[1]-g->ylim[0];
   float pixel = ((float)90 / pow(2, (float)g->level)) / (float)g->depth;
@@ -42,6 +42,7 @@ void setland(grid* g, polygons* p) {
     /* Check if polygons are in grid */
     if((a<0&&b<0) || (a>(n*g->depth)&&b>(n*g->depth))) continue;
     if((c<0&&d<0) || (c>(m*g->depth)&&d>(m*g->depth))) continue;
+    printf("Polygon: %d\n", i);
 
     /* Bounded to grid box */
     if(a<0) a = 0;
@@ -51,11 +52,12 @@ void setland(grid* g, polygons* p) {
 
     for(j=a;j<b;j++) {
       for(k=c;k<d;k++) {
+        inx = (j*m*g->depth+k);
         x = (-180)+pixel*(g->xlim[0]*g->depth+j);
         y = (-90)+pixel*(g->ylim[0]*g->depth+k);
-        printf("%f, %f, %d\n", x, y, j*m*g->depth);
+
         if(pip(p->p[i].n, p->p[i].x, p->p[i].y, x, y)) {
-          g->land[j*m*g->depth+k] = 1;
+          g->land[(int)floor(inx/8)] |= 1<<(inx%8);
         }
       }
     }
@@ -64,25 +66,26 @@ void setland(grid* g, polygons* p) {
 
 }
 
-#define MAX_DEPTH 1000
-
 int main(int argc, char** argv) {
+  /* ... */
+  unsigned int level = 12;
+  unsigned int depth = 200;
+
   /* Init objects */
   polygons p;
-  features fpoly, fgrid;
+  features f;
   grid g;
-  int i, j;
   
   /* Read polygons and set features */
   readpolygons(&p);
-  setlimits(&fpoly, &p);  
-
-  /* ... */
-  startgrid(&g, &fgrid, 12, 200); /* level: 12, depth: 200 */
+  setlimits(&f, &p);  
+      
+  /* Start grid and determine land area */
+  startgrid(&g, &f, level, depth, 1); /* level: 12, depth: 200 */
   setland(&g, &p);
 
   /* Write to file */
-  //writegrid(&g);
+  writegrid(&g);
 
   /* Deallocate */
   freegrid(&g);

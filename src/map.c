@@ -29,7 +29,7 @@ main(int argc, char** argv)
   readfeatures(&f);
   variogram(&m, &f, DEFAULT_MDL);
 
-  startgrid(&g, &f, 12, 200);
+  startgrid(&g, &f, 12, 200, 0);
   predict(&g, &m, &f);
 
 
