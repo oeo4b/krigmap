@@ -4,3 +4,4 @@ data/*
 bin/*
 test/*
 polygons/*
+grid/*
