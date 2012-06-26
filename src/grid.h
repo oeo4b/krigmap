@@ -3,12 +3,14 @@
 #include "features.h"
 
 typedef struct {
+  unsigned int n;
+  unsigned int m;
   unsigned int xlim[2];
   unsigned int ylim[2];
   unsigned short level;
   unsigned int depth;
-  char* land;
-  float* value;
+  unsigned char** land;
+  float** value;
 } grid;
 
 void startgrid(grid*, features*, int, int, int);

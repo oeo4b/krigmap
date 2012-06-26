@@ -1,5 +1,5 @@
 CC=gcc
-LIBS=-lm
+LIBS=-lm -lpthread -lz
 
 all: map convpoly regrid
 	rm bin/*.o

@@ -26,10 +26,9 @@ void setlimits(features* f, polygons* p) {
 }
 
 void setland(grid* g, polygons* p) {
-  unsigned int i, j, k;
-  unsigned int a, b, c, d, inx;
-  unsigned int n = g->xlim[1]-g->xlim[0];
-  unsigned int m = g->ylim[1]-g->ylim[0];
+  unsigned int i, j, k, l;
+  unsigned int a, b, c, d;
+  unsigned int iblk, ipxl;
   float pixel = ((float)90 / pow(2, (float)g->level)) / (float)g->depth;
   float x, y;
 
@@ -40,36 +39,37 @@ void setland(grid* g, polygons* p) {
     d = ceil((p->p[i].ylim[1]-(-90))/pixel) - g->ylim[0]*g->depth;
   
     /* Check if polygons are in grid */
-    if((a<0&&b<0) || (a>(n*g->depth)&&b>(n*g->depth))) continue;
-    if((c<0&&d<0) || (c>(m*g->depth)&&d>(m*g->depth))) continue;
-    printf("Polygon: %d\n", i);
+    if((a<0&&b<0) || (a>(g->n*g->depth)&&b>(g->n*g->depth))) continue;
+    if((c<0&&d<0) || (c>(g->m*g->depth)&&d>(g->m*g->depth))) continue;
 
     /* Bounded to grid box */
     if(a<0) a = 0;
-    if(b>n*g->depth) b = n*g->depth;
+    if(b>g->n*g->depth) b = g->n*g->depth;
     if(c<0) c = 0;
-    if(d>n*g->depth) d = m*g->depth;
+    if(d>g->n*g->depth) d = g->m*g->depth;
 
     for(j=a;j<b;j++) {
       for(k=c;k<d;k++) {
-        inx = (j*m*g->depth+k);
         x = (-180)+pixel*(g->xlim[0]*g->depth+j);
         y = (-90)+pixel*(g->ylim[0]*g->depth+k);
-
         if(pip(p->p[i].n, p->p[i].x, p->p[i].y, x, y)) {
-          g->land[(int)floor(inx/8)] |= 1<<(inx%8);
+          iblk = floor(j/g->depth)*g->m+floor(k/g->depth);
+          ipxl = (j%g->depth)*g->depth+(k%g->depth);
+          g->land[iblk][ipxl] = 1;
         }
       }
     }
-
+    printf("Polygon: %d\n", i);
   }
-
 }
 
 int main(int argc, char** argv) {
-  /* ... */
-  unsigned int level = 12;
-  unsigned int depth = 200;
+  if(argc<3) {
+    fprintf(stderr, "Error: not enough arguments.\n");
+    exit(1);
+  }
+  int level = atoi(argv[1]);
+  int depth = atoi(argv[2]);
 
   /* Init objects */
   polygons p;
@@ -79,16 +79,17 @@ int main(int argc, char** argv) {
   /* Read polygons and set features */
   readpolygons(&p);
   setlimits(&f, &p);  
-      
-  /* Start grid and determine land area */
-  startgrid(&g, &f, level, depth, 1); /* level: 12, depth: 200 */
-  setland(&g, &p);
 
-  /* Write to file */
-  writegrid(&g);
-
-  /* Deallocate */
-  freegrid(&g);
+  /* ... */
+  startgrid(&g, &f, level, depth, 1);
+  if(argc==4) {
+    readgrid(&g);
+    printgrid(&g);
+  }
+  else {
+    setland(&g, &p);
+    writegrid(&g);
+  }
 
   return 0;
 }

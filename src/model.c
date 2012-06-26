@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <pthread.h>
 #include "model.h"
 #include "grid.h"
 #include "features.h"
@@ -8,6 +9,8 @@
 
 float (*models[N_MDL+1])(float, model*);
 float* Xinv;
+
+grid* g_worker;
 features* f_worker;
 model* m_worker;
 
@@ -117,6 +120,15 @@ void fitmodel(model* m, float* distance, float* semivariance) {
   m->range = B[2];
 }
 
+void printmodel(model* m) {
+  printf("Type: %d\n", m->type);
+  printf("Nugget: %f\n", m->nugget);
+  printf("Range: %f\n", m->range);
+  printf("Sill: %f\n", m->sill);
+  printf("a: %f\n", m->a);
+  printf("MSE: %f\n", m->MSE);
+}
+
 void variogram(model* m, features* f, int mdl) {
   /* Partition coordinate set into lags */
   float** D = (float**)malloc(sizeof(float*)*f->n);
@@ -192,6 +204,7 @@ void variogram(model* m, features* f, int mdl) {
 
 void predict(grid* g, model* m, features* f) {
   /* Set up copies to n and model for the worker thread */
+  g_worker = g;
   f_worker = f;
   m_worker = m;
 
@@ -227,44 +240,62 @@ void predict(grid* g, model* m, features* f) {
   }
   invert(Xinv, f->n+1);
 
-  /* Estimate values based on model */
-  int k = g->xlim[1]-g->xlim[0];
-  int l = g->ylim[1]-g->xlim[0];
-  packet* p = (packet*)malloc(sizeof(packet)*k*l*g->depth*g->depth);
-  for(i=0;i<k*g->depth;i++) {
-    for(j=0;j<l*g->depth;j++) {
-      if(g->land[i*l*g->depth+j]) {
-        p[i*l*g->depth+j].value = &g->value[i*l*g->depth+j];
-        p[i*l*g->depth+j].x = f->n;
-        p[i*l*g->depth+j].y = f->n;
-        worker(&p[i*l*g->depth+j]);
-      }
-      else g->value[i*l*g->depth+j] = DEFAULT_VAL;
+  /* Set up workers */
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+  pthread_t* workers = (pthread_t*)malloc(sizeof(pthread_t)*g->n*g->m);
+
+  /* Send each block to a worker thread */
+  int** x = (int**)malloc(sizeof(int*)*g->n*g->m);
+  for(i=0;i<g->n;i++) {
+    for(j=0;j<g->m;j++) {
+      x[i*g->m+j] = (int*)malloc(sizeof(int)*2);
+      x[i*g->m+j][0] = i;
+      x[i*g->m+j][1] = j;
+      pthread_create(&workers[i*g->m+j], &attr, worker, (void*)x[i*g->m+j]);
     }
   }
 
-  for(i=0;i<k*g->depth;i++) {
-    for(j=0;j<l*g->depth;j++) {
-      printf("%f ", g->value[i*l*g->depth+j]);
+  /* Wait for threads to finish */
+  void* status;
+  pthread_attr_destroy(&attr);
+  for(i=0;i<g->n;i++) {
+    for(j=0;j<g->m;j++) {
+      pthread_join(workers[i*g->m+j], &status);
     }
-    printf("\n");
   }
 
   free(Xinv);
   free(D);
+  free(x);
 }
 
 void* worker(void* v) {
-  packet* p = (packet*)v;
+  int i, j, k, l, iblk, ipxl;
+  int* x = (int*)v;
+  float a, b, w;
+  float pixel = (float)(90) / pow(2, (float)g_worker->level);
 
-  int i, j;
-  float w;
-  *p->value = 0;
-  for(i=0;i<f_worker->n;i++) {
-    w = 0;
-    for(j=0;j<f_worker->n;j++)
-      w += Xinv[i*(f_worker->n+1)+j] * models[m_worker->type](pow(pow(f_worker->x[j]-p->x, 2) + pow(f_worker->y[j]-p->y, 2), (float)0.5), m_worker);
-     w += Xinv[i*(f_worker->n+1)+f_worker->n];
-     *p->value += w * f_worker->response[i];
-   }
+  iblk = x[0]*g_worker->m+x[1];
+  for(i=0;i<g_worker->depth;i++) {
+    for(j=0;j<g_worker->depth;j++) {
+      ipxl = i*g_worker->depth+j;
+      if(g_worker->land[iblk][ipxl]) {
+        a = (float)(-180) + pixel*(float)(g_worker->xlim[0]+x[0])+(float)i*pixel/g_worker->depth;
+        b = (float)(-90) + pixel*(float)(g_worker->ylim[0]+x[1])+(float)j*pixel/g_worker->depth;
+        g_worker->value[iblk][ipxl] = 0;
+        for(k=0;k<f_worker->n;k++) {
+          w = 0;
+          for(l=0;l<f_worker->n;l++) {
+            w += Xinv[k*(f_worker->n+1)+l] * models[m_worker->type](pow(pow(f_worker->x[l]-a, 2) + pow(f_worker->y[l]-b, 2), (float)0.5), m_worker);
+          }
+          w += Xinv[k*(f_worker->n+1)+f_worker->n];
+          g_worker->value[iblk][ipxl] += w * f_worker->response[k];
+        }
+      }
+      else g_worker->value[iblk][ipxl] = DEFAULT_VAL;
+    }
+  }
+  printf("Finished block %d.\n", iblk);
 }
