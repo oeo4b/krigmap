@@ -5,3 +5,5 @@ bin/*
 test/*
 polygons/*
 grid/*
+tmp/*
+src/#*

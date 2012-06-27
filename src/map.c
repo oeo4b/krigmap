@@ -7,10 +7,7 @@
 #include "grid.h"
 #include "features.h"
 #include "model.h"
-
-int parseargs(int argc, char** argv) {
-
-}
+#include "image.h"
 
 int 
 main(int argc, char** argv)
@@ -32,6 +29,7 @@ main(int argc, char** argv)
   grid g;
   features f;
   model m;
+  spectrum s;
 
   /* Stdin -> features */
   readfeatures(&f);
@@ -46,7 +44,12 @@ main(int argc, char** argv)
   /* Stdout */
   printmodel(&m);
 
+  /* Estimate values */
   predict(&g, &m, &f);
+
+  /* Write image */
+  heatspectrum(&s);
+  writeppm(&g, &f, &s);
 
   return 0;
 }

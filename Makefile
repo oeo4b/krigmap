@@ -1,11 +1,11 @@
 CC=gcc
-LIBS=-lm -lpthread -lz
+LIBS=-lm -lz -lpthread
 
 all: map convpoly regrid
 	rm bin/*.o
 
-map: bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o
-	$(CC) $(LIBS) bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o -o bin/map
+map: bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o bin/image.o
+	$(CC) $(LIBS) bin/map.o bin/features.o bin/grid.o bin/model.o bin/matrix.o bin/stats.o bin/image.o -o bin/map
 
 convpoly: bin/convpoly.o bin/polygons.o bin/stats.o bin/matrix.o
 	$(CC) $(LIBS) bin/convpoly.o bin/polygons.o bin/stats.o bin/matrix.o -o bin/convpoly
@@ -33,6 +33,9 @@ bin/grid.o: src/grid.c
 
 bin/model.o: src/model.c
 	$(CC) -c src/model.c -o bin/model.o
+
+bin/image.o: src/image.c
+	$(CC) -c src/image.c -o bin/image.o
 
 bin/matrix.o: src/math/matrix.c
 	$(CC) -c src/math/matrix.c -o bin/matrix.o
