@@ -14,30 +14,20 @@ grid* g_worker;
 features* f_worker;
 model* m_worker;
 
-float linear(float h, model* m) {
+inline float linear(float h, model* m) {
   return (m->nugget + h * (m->sill - m->nugget) / m->range);
 }
 
-float spherical(float h, model* m) {
-  if(h>m->range) return m->sill;
-  if(h<=m->range && h>0) {
-    return (m->nugget + (m->sill-m->nugget) * (((float)3*h) / ((float)2*m->range) - pow(h, 3) / ((float)2*pow(m->range, 3))));
-  }
-  else return (float)0;
+inline float spherical(float h, model* m) {
+  return (h==0) ? 0 : ((h>m->range) ? m->sill : (m->nugget + (m->sill-m->nugget) * (((float)3*h) / ((float)2*m->range) - pow(h, 3) / ((float)2*pow(m->range, 3)))));
 }
 
-float exponential(float h, model* m) {
-  if(h==0) return (float)0;
-  else {
-    return (m->nugget+(m->sill-m->nugget) * ((float)1-exp(-h/(m->range*m->a))));
-  }
+inline float exponential(float h, model* m) {
+  return (h==0) ? 0 : (m->nugget+(m->sill-m->nugget) * ((float)1-exp(-h/(m->range*m->a))));
 }
 
-float gaussian(float h, model* m) {
-  if(h==0) return (float)0;
-  else {
-    return (m->nugget+(m->sill-m->nugget) * ((float)1-exp(-pow(h, 2)/(pow(m->range, 2)*m->a))));
-  }
+inline float gaussian(float h, model* m) {
+  return (h==0) ? 0 : (m->nugget+(m->sill-m->nugget) * ((float)1-exp(-pow(h, 2)/(pow(m->range, 2)*m->a))));
 }
 
 void fitmodel(model* m, float* distance, float* semivariance) {
@@ -276,15 +266,22 @@ void* worker(void* v) {
   int* x = (int*)v;
   float a, b, w;
   float pixel = (float)(90) / pow(2, (float)g_worker->level);
-
   iblk = x[0]*g_worker->m+x[1];
+
+  /**
+   * Main loop for the block estimation 
+   * Current => O(d^2*n^2)
+   *
+   */
   for(i=0;i<g_worker->depth;i++) {
     for(j=0;j<g_worker->depth;j++) {
       ipxl = i*g_worker->depth+j;
       if(g_worker->land[iblk][ipxl]) {
+
         a = (float)(-180) + pixel*(float)(g_worker->xlim[0]+x[0])+(float)i*pixel/g_worker->depth;
         b = (float)(-90) + pixel*(float)(g_worker->ylim[0]+x[1])+(float)j*pixel/g_worker->depth;
         g_worker->value[iblk][ipxl] = 0;
+
         for(k=0;k<f_worker->n;k++) {
           w = 0;
           for(l=0;l<f_worker->n;l++) {
@@ -293,9 +290,11 @@ void* worker(void* v) {
           w += Xinv[k*(f_worker->n+1)+f_worker->n];
           g_worker->value[iblk][ipxl] += w * f_worker->response[k];
         }
+
       }
       else g_worker->value[iblk][ipxl] = DEFAULT_VAL;
     }
   }
+
   printf("Finished estimating block %d.\n", iblk);
 }

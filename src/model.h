@@ -30,13 +30,13 @@ typedef struct {
   float* value;
 } packet;
 
-float linear(float, model*);
+inline float linear(float, model*);
 
-float spherical(float, model*);
+inline float spherical(float, model*);
 
-float exponential(float, model*);
+inline float exponential(float, model*);
 
-float gaussian(float, model*);
+inline float gaussian(float, model*);
 
 void fitmodel(model*, float*, float*);
 

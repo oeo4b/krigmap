@@ -67,17 +67,16 @@ void writeppm(grid* g, features* x, spectrum* s) {
 }
 
 /* Color spectrums */
-
 void heatspectrum(spectrum* s) {
   int i;
-  s->n = 100;
+  s->n = 250;
   s->rgb = (unsigned char**)malloc(sizeof(unsigned char*)*s->n);
   for(i=0;i<s->n;i++)
     s->rgb[i] = (unsigned char*)malloc(sizeof(unsigned char)*3); /* 24-bit */
 
   for(i=0;i<s->n;i++) {
-    s->rgb[i][0] = 100;
-    s->rgb[i][1] = i+100;
-    s->rgb[i][2] = i+150;
+    s->rgb[i][0] = i+5;
+    s->rgb[i][1] = 0;
+    s->rgb[i][2] = 0;
   }
 }
