@@ -38,7 +38,31 @@ void startgrid(grid* g, features* f, int level, int depth, int land) {
       }
     }
   }
+}
 
+void singleblock(grid* g, int level, int depth, int x, int y) {
+  g->level = level;
+  g->depth = depth;
+  float block = (float)90 / pow(2, (float)g->level);
+
+  g->xlim[0] = x;
+  g->xlim[1] = x+1;
+  g->ylim[0] = y;
+  g->ylim[1] = y+1;
+
+  /* Alloc for a single block */
+  int i, j;
+  g->n = 1;
+  g->m = 1;
+  g->land = (unsigned char**)malloc(sizeof(unsigned char*)*g->n*g->m);
+  g->value = (float**)malloc(sizeof(float*)*g->n*g->m);
+  for(i=0;i<g->n;i++) {
+    for(j=0;j<g->m;j++) {
+      g->land[i*g->m+j] = (unsigned char*)malloc(sizeof(unsigned char)*g->depth*g->depth);
+      memset(g->land[i*g->m+j], 0, g->depth*g->depth);
+      g->value[i*g->m+j] = (float*)malloc(sizeof(float)*g->depth*g->depth);
+    }
+  }
 }
 
 void readgrid(grid* g) {

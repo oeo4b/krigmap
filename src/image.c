@@ -29,6 +29,37 @@ void readppm(grid* g) {
 
 }
 
+void printppm(grid* g, features* x, spectrum* s) {
+ /* Print block by block */
+  int i, j, k, l, m, iblk, ipxl;
+  char rgb[3];
+
+  /* Find response range */
+  float range[] = { min(x->response, x->n), max(x->response, x->n) };
+
+  for(i=0;i<g->n;i++) {
+    for(j=0;j<g->m;j++) {
+      iblk = i*g->m+j;  
+      printf("P6\n%d %d\n255\n", g->depth, g->depth);
+      for(l=(g->depth-1);l>=0;l--) {
+        for(k=0;k<g->depth;k++) {
+          ipxl = k*g->depth+l;
+          if(g->land[iblk][ipxl]) {
+            color(g->value[iblk][ipxl], range, s, rgb);
+            for(m=0;m<3;m++)
+              printf("%c", rgb[m]);
+          }
+          else {
+            for(m=0;m<3;m++) {
+              printf("%c", g->land[iblk][ipxl]);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 void writeppm(grid* g, features* x, spectrum* s) {
   /* Write block by block */
   FILE* f;
@@ -43,6 +74,7 @@ void writeppm(grid* g, features* x, spectrum* s) {
   for(i=0;i<g->n;i++) {
     for(j=0;j<g->m;j++) {
       iblk = i*g->m+j;
+      printf("Writing block (%d, %d)\n", g->xlim[0]+i, g->ylim[0]+j);
       sprintf(fname, "tmp/l%d_d%d_%d_%d.ppm", g->level, g->depth, g->xlim[0]+i, g->ylim[0]+j);
       f = fopen(fname, "wb");
   

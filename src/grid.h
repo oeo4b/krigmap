@@ -15,6 +15,8 @@ typedef struct {
 
 void startgrid(grid*, features*, int, int, int);
 
+void singleblock(grid*, int, int, int, int);
+
 void readgrid(grid*);
 
 void writegrid(grid*);

@@ -295,6 +295,4 @@ void* worker(void* v) {
       else g_worker->value[iblk][ipxl] = DEFAULT_VAL;
     }
   }
-
-  printf("Finished estimating block %d.\n", iblk);
 }
