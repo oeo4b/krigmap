@@ -76,7 +76,7 @@ void readgrid(grid* g) {
   for(i=0;i<g->n;i++) {
     for(j=0;j<g->m;j++) {
       iblk = i*g->m+j;
-      sprintf(fname, "grid/l%d_d%d_%d_%d.grd", g->level, g->depth, g->xlim[0]+i, g->ylim[0]+j);
+      sprintf(fname, "/Users/omar/Desktop/apps/ckriging/grid/l%d_d%d_%d_%d.grd", g->level, g->depth, g->xlim[0]+i, g->ylim[0]+j);
 
       if(access(fname, F_OK)== -1) continue;
 

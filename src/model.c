@@ -111,12 +111,15 @@ void fitmodel(model* m, float* distance, float* semivariance) {
 }
 
 void printmodel(model* m) {
-  printf("Type: %d\n", m->type);
-  printf("Nugget: %f\n", m->nugget);
-  printf("Range: %f\n", m->range);
-  printf("Sill: %f\n", m->sill);
-  printf("a: %f\n", m->a);
-  printf("MSE: %f\n", m->MSE);
+  /* JSON output */
+  printf("{\n");
+  printf("\t\"type\": %d,\n", m->type);
+  printf("\t\"nugget\": %f,\n", m->nugget);
+  printf("\t\"range\": %f,\n", m->range);
+  printf("\t\"sill\": %f,\n", m->sill);
+  printf("\t\"a\": %f,\n", m->a);
+  printf("\t\"MSE\": %f\n", m->MSE);
+  printf("}");
 }
 
 void variogram(model* m, features* f, int mdl) {
@@ -214,47 +217,43 @@ void predict(grid* g, model* m, features* f) {
 
   /* X^-1 * Y ~ W */
   Xinv = (float*)malloc(sizeof(float)*(f->n+1)*(f->n+1));
-  for(i=0;i<=f->n;i++) {
-    for(j=0;j<=f->n;j++) {
+  for(i=0;i<=f->n;i++)
+    for(j=0;j<=f->n;j++)
       if(i==f->n && j!=f->n) Xinv[i*(f->n+1)+j] = 1;
-      else {
+      else
         if(i!=f->n && j==f->n) Xinv[i*(f->n+1)+j] = 1;
-        else {
+        else
           if(i==f->n && j==f->n) Xinv[i*(f->n+1)+j] = 0;
-          else {
+          else
             Xinv[i*(f->n+1)+j] = models[m->type](D[i*f->n+j], m);
-          }
-        }
-      }
-    }
-  }
   invert(Xinv, f->n+1);
 
   /* Set up workers */
+  int k, l;
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-  pthread_t* workers = (pthread_t*)malloc(sizeof(pthread_t)*g->n*g->m);
 
-  /* Send each block to a worker thread */
-  int** x = (int**)malloc(sizeof(int*)*g->n*g->m);
-  for(i=0;i<g->n;i++) {
-    for(j=0;j<g->m;j++) {
-      x[i*g->m+j] = (int*)malloc(sizeof(int)*2);
-      x[i*g->m+j][0] = i;
-      x[i*g->m+j][1] = j;
-      pthread_create(&workers[i*g->m+j], &attr, worker, (void*)x[i*g->m+j]);
+  /* Sub-block or per-block threads */
+  k = (g->n==1 && g->m==1) ? (int)floor(pow(MAX_SUBBLOCKS, 0.5)) : g->n;
+  l = (g->n==1 && g->m==1) ? k : g->m;
+  pthread_t* workers = (pthread_t*)malloc(sizeof(pthread_t)*k*l);
+  int** x = (int**)malloc(sizeof(int*)*k*l);
+
+  for(i=0;i<k;i++)
+    for(j=0;j<l;j++) {
+      x[i*l+j] = (int*)malloc(sizeof(int)*2);
+      x[i*l+j][0] = i;
+      x[i*l+j][1] = j;
+      pthread_create(&workers[i*l+j], &attr, worker, (void*)x[i*l+j]);
     }
-  }
-
+    
   /* Wait for threads to finish */
   void* status;
   pthread_attr_destroy(&attr);
-  for(i=0;i<g->n;i++) {
-    for(j=0;j<g->m;j++) {
-      pthread_join(workers[i*g->m+j], &status);
-    }
-  }
+  for(i=0;i<k;i++)
+    for(j=0;j<l;j++)
+      pthread_join(workers[i*l+j], &status);
 
   free(Xinv);
   free(D);
@@ -262,37 +261,34 @@ void predict(grid* g, model* m, features* f) {
 }
 
 void* worker(void* v) {
-  int i, j, k, l, iblk, ipxl;
+  int i, j, k, l, iblk, ipxl, z;
   int* x = (int*)v;
   float a, b, w;
   float pixel = (float)(90) / pow(2, (float)g_worker->level);
-  iblk = x[0]*g_worker->m+x[1];
+  z = (g_worker->n==1 && g_worker->m==1)? g_worker->depth/floor(pow(MAX_SUBBLOCKS, 0.5)) : 0;
+  iblk = z ? 0 : x[0]*g_worker->m+x[1];
 
   /**
-   * Main loop for the block estimation 
-   * Current => O(d^2*n^2)
-   *
+   * Main loop for block estimation 
    */
-  for(i=0;i<g_worker->depth;i++) {
-    for(j=0;j<g_worker->depth;j++) {
+  for(i=z*x[0];i<(z?z*(x[0]+1):g_worker->depth);i++) {
+    for(j=z*x[1];j<(z?z*(x[1]+1):g_worker->depth);j++) {
       ipxl = i*g_worker->depth+j;
       if(g_worker->land[iblk][ipxl]) {
+        a = (float)(-180) + pixel*(float)(g_worker->xlim[0]+(z?0:x[0]))+(float)i*pixel/g_worker->depth;
+        b = (float)(-90) + pixel*(float)(g_worker->ylim[0]+(z?0:x[1]))+(float)j*pixel/g_worker->depth;
 
-        a = (float)(-180) + pixel*(float)(g_worker->xlim[0]+x[0])+(float)i*pixel/g_worker->depth;
-        b = (float)(-90) + pixel*(float)(g_worker->ylim[0]+x[1])+(float)j*pixel/g_worker->depth;
         g_worker->value[iblk][ipxl] = 0;
-
         for(k=0;k<f_worker->n;k++) {
           w = 0;
-          for(l=0;l<f_worker->n;l++) {
-            w += Xinv[k*(f_worker->n+1)+l] * models[m_worker->type](pow(pow(f_worker->x[l]-a, 2) + pow(f_worker->y[l]-b, 2), (float)0.5), m_worker);
-          }
+          for(l=0;l<f_worker->n;l++)
+	    w += Xinv[k*(f_worker->n+1)+l] * models[m_worker->type](pow(pow(f_worker->x[l]-a, 2) + pow(f_worker->y[l]-b, 2), (float)0.5), m_worker);
           w += Xinv[k*(f_worker->n+1)+f_worker->n];
           g_worker->value[iblk][ipxl] += w * f_worker->response[k];
         }
-
       }
       else g_worker->value[iblk][ipxl] = DEFAULT_VAL;
     }
   }
+  pthread_exit(NULL);
 }

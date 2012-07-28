@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "features.h"
 
 void readfeatures(features* f) {
@@ -10,7 +11,7 @@ void readfeatures(features* f) {
 
   int i = 0;
   int j;
-  while(gets(line)==line) {
+  while(fgets(line, MAX_LINE, stdin)==line) {
     value = strtok(line, ",");
     j = 0;
     while(value != NULL && j<3) {
@@ -18,18 +19,12 @@ void readfeatures(features* f) {
       value = strtok(NULL, ",");
       j++;
     }
-    if(j!=3) {
-      fprintf(stderr, "Error: Column variables should be of format - x,y,response\n");
-      exit(1);
-    }
-    i++;
-  }
-  if(i==0) {
-    fprintf(stderr, "Error: No data provided\n");
-    exit(1);
+    if(j==3) i++;
   }
 
   f->n = i;
+  if(f->n==0) return; /* Return if no data provided */
+
   f->x = (float*)malloc(sizeof(float)*f->n);
   f->y = (float*)malloc(sizeof(float)*f->n);
   f->response = (float*)malloc(sizeof(float)*f->n);

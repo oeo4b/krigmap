@@ -10,8 +10,10 @@
 #define GAU_MDL 4
 #define N_MDL 4
 
-#define LAGS 10
+#define LAGS 5
 #define MAX_ITER 25
+
+#define MAX_SUBBLOCKS 16
 
 #define DEFAULT_VAL -1
 
@@ -43,6 +45,8 @@ void fitmodel(model*, float*, float*);
 void variogram(model*, features*, int);
 
 void predict(grid*, model*, features*);
+
+void printmodel(model*);
 
 void* worker(void*);
 

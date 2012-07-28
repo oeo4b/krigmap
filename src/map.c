@@ -25,7 +25,6 @@ main(int argc, char** argv)
   }
   int level = atoi(argv[1]);
   int depth = atoi(argv[2]);
-
   grid g;
   features f;
   model m;

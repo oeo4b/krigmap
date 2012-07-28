@@ -29,13 +29,17 @@ void readppm(grid* g) {
 
 }
 
-void printppm(grid* g, features* x, spectrum* s) {
+void printppm(grid* g, features* x, spectrum* s, int blank) {
  /* Print block by block */
   int i, j, k, l, m, iblk, ipxl;
   char rgb[3];
 
   /* Find response range */
-  float range[] = { min(x->response, x->n), max(x->response, x->n) };
+  float range[2];
+  if(!blank) {
+    range[0] = min(x->response, x->n);
+    range[1] = max(x->response, x->n);
+  }
 
   for(i=0;i<g->n;i++) {
     for(j=0;j<g->m;j++) {
@@ -45,9 +49,15 @@ void printppm(grid* g, features* x, spectrum* s) {
         for(k=0;k<g->depth;k++) {
           ipxl = k*g->depth+l;
           if(g->land[iblk][ipxl]) {
-            color(g->value[iblk][ipxl], range, s, rgb);
-            for(m=0;m<3;m++)
-              printf("%c", rgb[m]);
+            if(blank) {
+              for(m=0;m<3;m++)
+                printf("%c", BLANK_VALUE);
+            }
+            else {
+              color(g->value[iblk][ipxl], range, s, rgb);
+              for(m=0;m<3;m++)
+                printf("%c", rgb[m]);
+            }
           }
           else {
             for(m=0;m<3;m++) {
