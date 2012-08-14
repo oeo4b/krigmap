@@ -10,7 +10,7 @@
 #define GAU_MDL 4
 #define N_MDL 4
 
-#define LAGS 5
+#define MAX_LAGS 10
 #define MAX_ITER 25
 
 #define MAX_SUBBLOCKS 16
@@ -40,7 +40,7 @@ inline float exponential(float, model*);
 
 inline float gaussian(float, model*);
 
-void fitmodel(model*, float*, float*);
+void fitmodel(model*, float*, float*, int);
 
 void variogram(model*, features*, int);
 
