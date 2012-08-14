@@ -24,7 +24,7 @@ main(int argc, char** argv)
   readfeatures(&f);
  
   /* Fit model and predict */
-  variogram(&m, &f, DEFAULT_MDL);
+  variogram(&m, &f, argc>1 ? atoi(argv[1]) : DEFAULT_MDL);
 
   /* Print model */
   printmodel(&m);
