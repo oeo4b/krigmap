@@ -30,11 +30,11 @@ inline float gaussian(float h, model* m) {
   return (h==0) ? 0 : (m->nugget+(m->sill-m->nugget) * ((float)1-exp(-pow(h, 2)/(pow(m->range, 2)*m->a))));
 }
 
-void fitmodel(model* m, float* distance, float* semivariance) {
+void fitmodel(model* m, float* distance, float* semivariance, int n) {
   /* Jacobian matrix, residuals and parameter estimates */
   float B[3];
-  float J[3*LAGS];
-  float r[LAGS];
+  float J[3*n];
+  float r[n];
   float delta[3];
 
   /* Switch through models */
@@ -42,69 +42,69 @@ void fitmodel(model* m, float* distance, float* semivariance) {
   float sum = 0;
 
   /* Set the starting parameters */
-  B[0] = min(semivariance, LAGS);
-  B[1] = max(semivariance, LAGS) - min(semivariance, LAGS);
-  B[2] = max(distance, LAGS);
+  B[0] = min(semivariance, n);
+  B[1] = max(semivariance, n) - min(semivariance, n);
+  B[2] = max(distance, n);
   m->a = (float)1 / (float)3;
 
   switch(m->type) {
   case 1: /* Linear model */
-    lm(semivariance, distance, B, LAGS);
-    B[1] = B[1] * max(distance, LAGS);
-    B[2] = max(distance, LAGS);
-    for(i=0;i<LAGS;i++)
+    lm(semivariance, distance, B, n);
+    B[1] = B[1] * max(distance, n);
+    B[2] = max(distance, n);
+    for(i=0;i<n;i++)
       sum += pow(semivariance[i] - B[0] - B[1]*(distance[i]/B[2]), 2);
     break;
 
   case 2: /* Spherical */
     for(i=0;i<MAX_ITER;i++) {
-      for(j=0;j<LAGS;j++) {
-	J[0*LAGS+j] = -1;
-	J[1*LAGS+j] = (pow(distance[j], 3) - (float)3*pow(B[2], 2)*distance[j]) / ((float)2*pow(B[2], 3));
-	J[2*LAGS+j] = -((float)3*B[1]*pow(distance[j], 3) - (float)3*B[1]*pow(B[2], 2)*distance[j]) / ((float)2*pow(B[2], 4));
+      for(j=0;j<n;j++) {
+	J[0*n+j] = -1;
+	J[1*n+j] = (pow(distance[j], 3) - (float)3*pow(B[2], 2)*distance[j]) / ((float)2*pow(B[2], 3));
+	J[2*n+j] = -((float)3*B[1]*pow(distance[j], 3) - (float)3*B[1]*pow(B[2], 2)*distance[j]) / ((float)2*pow(B[2], 4));
 	r[j] = semivariance[j] - B[0] - B[1]*(((float)3/(float)2)*(distance[j]/B[2]) - ((float)1/(float)2)*pow(distance[j]/B[2], 3));
       }
-      if(!nlm(r, J, delta, LAGS, 3)) break;
+      if(!nlm(r, J, delta, n, 3)) break;
       if(delta[0]==0 && delta[1]==0 && delta[2]==0) break;
       for(j=0;j<3;j++) B[j] = B[j] - delta[j];
     }
-    for(i=0;i<LAGS;i++)
+    for(i=0;i<n;i++)
       sum += pow(semivariance[i] - B[0] - B[1]*(((float)3/(float)2)*(distance[i]/B[2]) - ((float)1/(float)2)*pow(distance[i]/B[2], 3)), 2);
     break;
 
   case 3: /* Exponential */
     for(i=0;i<MAX_ITER;i++) {
-      for(j=0;j<LAGS;j++) {
-	J[0*LAGS+j] = -1;
-	J[1*LAGS+j] = -exp(-distance[j]/(B[2]*m->a)) * (exp(distance[j]/(B[2]*m->a)) - (float)1);
-	J[2*LAGS+j] = (B[1]*distance[j]*exp(-distance[j]/(B[2]*m->a))) / (pow(B[2], 2)*m->a);
+      for(j=0;j<n;j++) {
+	J[0*n+j] = -1;
+	J[1*n+j] = -exp(-distance[j]/(B[2]*m->a)) * (exp(distance[j]/(B[2]*m->a)) - (float)1);
+	J[2*n+j] = (B[1]*distance[j]*exp(-distance[j]/(B[2]*m->a))) / (pow(B[2], 2)*m->a);
 	r[j] = semivariance[j] - B[0] - B[1]*((float)1 - exp(-((float)1/m->a)*(distance[j]/B[2])));
       }
-      if(!nlm(r, J, delta, LAGS, 3)) break;
+      if(!nlm(r, J, delta, n, 3)) break;
       if(delta[0]==0 && delta[1]==0 && delta[2]==0) break;
       for(j=0;j<3;j++) B[j] = B[j] - delta[j];
     }
-    for(i=0;i<LAGS;i++)
+    for(i=0;i<n;i++)
       sum += pow(semivariance[i] - B[0] - B[1]*((float)1 - exp(-((float)1/m->a)*(distance[i]/B[2]))), 2);
     break;
   case 4: /* Gaussian */
     for(i=0;i<MAX_ITER;i++) {
-      for(j=0;j<LAGS;j++) {
-	J[0*LAGS+j] = -1;
-	J[1*LAGS+j] = -exp(-pow(distance[j], 2)/(pow(B[2], 2)*m->a)) * (exp(pow(distance[j], 2)/(pow(B[2], 2)*m->a)) - (float)1);
-	J[2*LAGS+j] = ((float)2*B[1]*pow(distance[j], 2)*exp(-pow(distance[j], 2)/(pow(B[2], 2)*m->a))) / (pow(B[2], 3)*m->a);
+      for(j=0;j<n;j++) {
+	J[0*n+j] = -1;
+	J[1*n+j] = -exp(-pow(distance[j], 2)/(pow(B[2], 2)*m->a)) * (exp(pow(distance[j], 2)/(pow(B[2], 2)*m->a)) - (float)1);
+	J[2*n+j] = ((float)2*B[1]*pow(distance[j], 2)*exp(-pow(distance[j], 2)/(pow(B[2], 2)*m->a))) / (pow(B[2], 3)*m->a);
 	r[j] = semivariance[j] - B[0] - B[1]*((float)1 - exp(-((float)1/m->a)*pow(distance[j]/B[2], 2)));
       }
-      if(!nlm(r, J, delta, LAGS, 3)) break;
+      if(!nlm(r, J, delta, n, 3)) break;
       if(delta[0]==0 && delta[1]==0 && delta[2]==0) break;
       for(j=0;j<3;j++) B[j] = B[j] - delta[j];
     }
-    for(i=0;i<LAGS;i++)
+    for(i=0;i<n;i++)
       sum += pow(semivariance[i] - B[0] - B[1]*((float)1 - exp(-((float)1/m->a)*pow(distance[i]/B[2], 2))), 2);
     break;
   }
 
-  m->MSE = sum/((float)LAGS - (float)3);
+  m->MSE = sum/(float)n;
   m->nugget = B[0];
   m->sill = B[1] + B[0];
   m->range = B[2];
@@ -123,47 +123,45 @@ void printmodel(model* m) {
 }
 
 void variogram(model* m, features* f, int mdl) {
-  /* Partition coordinate set into lags */
-  float** D = (float**)malloc(sizeof(float*)*f->n);
-  float** V = (float**)malloc(sizeof(float*)*f->n);
-
   int i, j, k;
-  for(i=0;i<f->n;i++) {
-    D[i] = (float*)malloc(sizeof(float)*f->n);
-    V[i] = (float*)malloc(sizeof(float)*f->n);
-    for(j=0;j<f->n;j++) {
-      D[i][j] = pow(pow(f->x[i]-f->x[j], 2) + pow(f->y[i]-f->y[j], 2), 0.5);
-      V[i][j] = pow(f->response[i]-f->response[j], 2);
+  int n = f->n;
+  int p = (pow(n, 2)-n) / 2;
+
+  /* Euclidean distance */
+  float* D = (float*)malloc(sizeof(float)*p);
+  float* V = (float*)malloc(sizeof(float)*p);
+  for(i=0,k=0;i<(n-1);i++)
+    for(j=(i+1);j<n;j++,k++) {
+      D[k] = pow(pow(f->x[i]-f->x[j], 2) + pow(f->y[i]-f->y[j], 2), 0.5);
+      V[k] = (float)pow(f->response[i]-f->response[j], 2);
     }
-  }
 
-  float cutoff = pow(pow(max(f->x, f->n)-min(f->x, f->n), 2) + pow(max(f->y, f->n)-min(f->y, f->n), 2), 0.5) / (float)3;
-
-  /* Fit -> semivariance ~ distance */
-  float* distance = (float*)malloc(sizeof(float)*LAGS);
-  float* semivariance = (float*)malloc(sizeof(float)*LAGS);
-
-  int n;
-  float sum;
-  for(i=0;i<LAGS;i++) {
-    sum = 0;
-    n = 0;
-    for(j=0;j<(f->n-1);j++) {
-      for(k=(j+1);k<f->n;k++) {
-        if(D[j][k]<=((float)(i+1) * cutoff/(float)LAGS)) {
-          n++;
-          sum += V[j][k];
-        }
+  /* Bubble sort */
+  float a, b;
+  for(i=(p-1);i>0;i--)
+    for(j=1;j<=i;j++)
+      if(D[j-1]>D[j]) {
+        a = D[j-1];
+        b = V[j-1];
+        D[j-1] = D[j];
+        D[j] = a;
+        V[j-1] = V[j];
+        V[j] = b;
       }
+
+  /* Lags */
+  float sum;
+  int lags = p>MAX_LAGS ? MAX_LAGS : p;
+  float* distance = (float*)malloc(sizeof(float)*lags);
+  float* semivariance = (float*)malloc(sizeof(float)*lags);
+
+  for(i=1,j=0;i<=lags;i++) {
+    sum = 0;
+    for(k=0;j<((float)i/(float)lags)*(float)p;j++,k++) {
+      sum += V[j];
     }
-    if(n>0) {
-      distance[i] = (float)(i+1) * cutoff / (float)LAGS;
-      semivariance[i] = sum / n;
-    }
-    else {
-      fprintf(stderr, "Error: Unable to calculate semivariance\n");
-      exit(1);
-    }
+    distance[i-1] = D[j-1];
+    semivariance[i-1] = sum / (float)k;
   }
 
   if(mdl==DEFAULT_MDL) {
@@ -171,10 +169,10 @@ void variogram(model* m, features* f, int mdl) {
     model mt[N_MDL];
     for(i=0;i<N_MDL;i++) {
       mt[i].type = i+1;
-      fitmodel(&mt[i], distance, semivariance);
+      fitmodel(&mt[i], distance, semivariance, lags);
     }
     m->MSE = 1000;
-    for(i=0;i<N_MDL;i++) {
+    for(i=0;i<N_MDL;i++)
       if(mt[i].MSE<m->MSE) {
         m->type = mt[i].type;
         m->nugget = mt[i].nugget;
@@ -183,11 +181,10 @@ void variogram(model* m, features* f, int mdl) {
         m->a = mt[i].a;
         m->MSE = mt[i].MSE;
       }
-    }
   }
   else {
     m->type = mdl;
-    fitmodel(m, distance, semivariance);
+    fitmodel(m, distance, semivariance, lags);
   }
   free(D);
   free(V);
