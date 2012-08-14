@@ -2,7 +2,7 @@
 #define IMAGE_H
 #include "grid.h"
 
-#define BLANK_VALUE 1
+#define BLANK_VALUE 200
 
 typedef struct {
   unsigned int n;
